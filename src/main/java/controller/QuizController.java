@@ -1,10 +1,13 @@
 package controller;
 
 
+import dao.ClassDAO;
 import dao.OptionDAO;
 import dao.QuestionDAO;
+import dao.QuizDAO;
 import model.Question;
 import model.Option;
+import model.Quiz;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -99,7 +102,45 @@ public class QuizController extends HttpServlet {
         response.sendRedirect("QuizController?action=list");
     }
 
+    private void showNewForm(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException, SQLException {
+        ClassDAO classDAO = new ClassDAO();
+        List<ClassInfo> listClass = classDAO.getAllClasses();
+        request.setAttribute("listClass", listClass);
+        RequestDispatcher dispatcher = request.getRequestDispatcher("quiz-form.jsp");
+        dispatcher.forward(request, response);
+    }
     
+    private void showEditForm(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, ServletException, IOException {
+        ClassDAO classDAO = new ClassDAO();
+        int quizId = Integer.parseInt(request.getParameter("quizId"));
+        Quiz existingQuiz = quizDAO.getQuizById(quizId);
+        List<ClassInfo> listClass = classDAO.getAllClasses();
+        request.setAttribute("quiz", existingQuiz);
+        request.setAttribute("listClass", listClass);
+        RequestDispatcher dispatcher = request.getRequestDispatcher("quiz-form.jsp");
+        dispatcher.forward(request, response);
+    }
+
+    private void updateQuiz(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, IOException {
+        int quizId = Integer.parseInt(request.getParameter("quizId"));
+        String quizTitle = request.getParameter("quizTitle");
+        int classId = Integer.parseInt(request.getParameter("classId"));
+        int createdBy = 1;
+
+        Quiz updatedQuiz = new Quiz(quizId, quizTitle, classId, createdBy);
+        quizDAO.updateQuiz(updatedQuiz);
+        response.sendRedirect("QuizController?action=list");
+    }
+
+    private void deleteQuiz(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, IOException {
+        int quizId = Integer.parseInt(request.getParameter("quizId"));
+        quizDAO.deleteQuiz(quizId);
+        response.sendRedirect("QuizController?action=list");
+    }
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         this.doGet(req, resp);
