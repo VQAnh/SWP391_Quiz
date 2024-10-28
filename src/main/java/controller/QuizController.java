@@ -141,8 +141,109 @@ public class QuizController extends HttpServlet {
         quizDAO.deleteQuiz(quizId);
         response.sendRedirect("QuizController?action=list");
     }
+    
+    private void viewQuestions(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, IOException, ServletException {
+        int quizId = Integer.parseInt(request.getParameter("quizId"));
+        List<Question> questions = questionDAO.getQuestionsByQuizId(quizId);
+        request.setAttribute("questions", questions);
+        RequestDispatcher dispatcher = request.getRequestDispatcher("quiz-questions.jsp");
+        dispatcher.forward(request, response);
+    }
+
+    private void viewQuestionDetails(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, ServletException, IOException {
+        int questionId = Integer.parseInt(request.getParameter("questionId"));
+        Question question = questionDAO.getQuestionById(questionId);
+        List<Option> options = optionDAO.getOptionsByQuestionId(questionId);
+        request.setAttribute("question", question);
+        request.setAttribute("options", options);
+        request.setAttribute("quizId", request.getParameter("quizId"));
+        RequestDispatcher dispatcher = request.getRequestDispatcher("question-details.jsp");
+        dispatcher.forward(request, response);
+    }
+
+    private void showNewQuestionForm(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        request.setAttribute("quizId", request.getParameter("quizId"));
+        RequestDispatcher dispatcher = request.getRequestDispatcher("question-form.jsp");
+        dispatcher.forward(request, response);
+    }
+
+    private void insertQuestion(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, IOException, ServletException {
+        int quizId = Integer.parseInt(request.getParameter("quizId"));
+        String questionText = request.getParameter("questionText");
+
+        Question newQuestion = new Question();
+        newQuestion.setQuizId(quizId);
+        newQuestion.setQuestionText(questionText);
+        int questionId = questionDAO.addQuestion(newQuestion);
+
+        if (questionId > 0) {
+            List<Option> options = new ArrayList<>();
+            for (int i = 1; i <= 4; i++) {
+                String optionText = request.getParameter("option" + i);
+                boolean isCorrect = "on".equals(request.getParameter("isCorrect" + i));
+
+                Option option = new Option();
+                option.setQuestionId(questionId);
+                option.setOptionText(optionText);
+                option.setIsCorrect(isCorrect);
+                options.add(option);
+            }
+
+            for (Option option : options) {
+                optionDAO.addOption(option);
+            }
+
+            response.sendRedirect("QuizController?action=viewQuestions&quizId=" + quizId);
+        } else {
+            request.setAttribute("errorMessage", "Failed to add the question.");
+            showNewQuestionForm(request, response);
+        }
+    }
+
+    private void showEditQuestionForm(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, ServletException, IOException {
+        int questionId = Integer.parseInt(request.getParameter("questionId"));
+        Question question = questionDAO.getQuestionById(questionId);
+        List<Option> options = optionDAO.getOptionsByQuestionId(questionId);
+
+        request.setAttribute("question", question);
+        request.setAttribute("options", options);
+        request.setAttribute("quizId", request.getParameter("quizId"));
+        RequestDispatcher dispatcher = request.getRequestDispatcher("question-edit.jsp");
+        dispatcher.forward(request, response);
+    }
+
+    private void updateQuestion(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, IOException {
+        int questionId = Integer.parseInt(request.getParameter("questionId"));
+        String questionText = request.getParameter("questionText");
+
+        Question updatedQuestion = new Question();
+        updatedQuestion.setQuestionId(questionId);
+        updatedQuestion.setQuestionText(questionText);
+        questionDAO.updateQuestion(updatedQuestion);
+
+        for (int i = 1; i <= 4; i++) {
+            int optionId = Integer.parseInt(request.getParameter("optionId" + i));
+            String optionText = request.getParameter("optionText" + i);
+            boolean isCorrect = "on".equals(request.getParameter("isCorrect" + i));
+
+            Option option = new Option();
+            option.setOptionId(optionId);
+            option.setOptionText(optionText);
+            option.setIsCorrect(isCorrect);
+            optionDAO.updateOption(option);
+        }
+        response.sendRedirect("QuizController?action=viewQuestionDetails&questionId=" + questionId);
+    }
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         this.doGet(req, resp);
     }
 }
+
+    
